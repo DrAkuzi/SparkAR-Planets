@@ -17,7 +17,7 @@
 
 // How to load in modules
 const Scene = require('Scene');
-
+const Patches = require('Patches');
 // Use export keyword to make a symbol available in scripting debug console
 export const Diagnostics = require('Diagnostics');
 
@@ -35,12 +35,10 @@ export const Diagnostics = require('Diagnostics');
 
     // Get the camera world space position
     const cameraPositionSignal = tracker.worldTransform.inverse().applyToPoint(camera.worldTransform.position);
-
+    await Patches.inputs.setVector('rotate', tracker.transform.lookAt(cameraPositionSignal).rotation);
     // Apply the rotation of the relative transform between plane tracker and camera world position
-    plane.transform.rotation = tracker.transform.lookAt(cameraPositionSignal).rotation;
+    //plane.transform.rotation = tracker.transform.lookAt(cameraPositionSignal).rotation;
 
-    // Bring object back to the plane tracker origin
-    //plane.worldTransform.position = tracker.worldTransform.position;
     //Diagnostics.log("here");
 
 })(); // Enables async/await in JS [part 2]

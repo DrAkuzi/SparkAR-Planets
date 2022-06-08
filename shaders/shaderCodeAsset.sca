@@ -89,7 +89,7 @@ float NebulaNoise(std::Texture2d myTex, vec3 p)
 
 float map(std::Texture2d myTex, vec3 p, vec2 rotate) 
 {
-	R(p.xz, rotate.x*0.008*pi+std::getTime()*0.25);
+	R(p.xz, rotate.x*0.008*pi);//+std::getTime()*0.25
     R(p.yz, rotate.y*0.008*pi);
 
 	float NebNoise = abs(NebulaNoise(myTex, p/0.5)*0.5);
