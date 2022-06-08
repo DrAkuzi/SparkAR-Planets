@@ -31,7 +31,7 @@ export const Diagnostics = require('Diagnostics');
 
     const camera = await Scene.root.findFirst('Camera');
     const tracker = await Scene.root.findFirst('planeTracker0');
-    const plane = await Scene.root.findFirst('canvas0');
+    const plane = await Scene.root.findFirst('plane0');
 
     // Get the camera world space position
     const cameraPositionSignal = tracker.worldTransform.inverse().applyToPoint(camera.worldTransform.position);

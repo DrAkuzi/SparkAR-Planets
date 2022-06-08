@@ -126,7 +126,7 @@ bool RaySphereIntersect(vec3 org, vec3 dir, out float near, out float far)
 	return far > 0.0;
 }
 
-vec4 mainImage(std::Texture2d myTex, vec2 rotate, std::Texture2d camTex)
+vec4 mainImage(std::Texture2d myTex, vec2 rotate)
 {  
 	// ro: ray origin
 	// rd: direction of the ray
@@ -136,7 +136,6 @@ vec4 mainImage(std::Texture2d myTex, vec2 rotate, std::Texture2d camTex)
 	vec3 ro = vec3(0., 0., -8.);
 	vec2 uv = std::getVertexTexCoord();
 	vec4 myTexUV = myTex.sample(uv);
-	vec4 camTexUV = camTex.sample(uv);
     
 	// ld, td: local, total density 
 	// w: weighting factor
@@ -146,9 +145,9 @@ vec4 mainImage(std::Texture2d myTex, vec2 rotate, std::Texture2d camTex)
 	// d: distance function
 	float d=1., t=0.;
     
-    const float h = 0.1;
+    const float h = 0.1;//0.1;
    
-	vec4 sum = vec4(0.0);
+	vec4 sum = vec4(0);
    
     float min_dist=0.0, max_dist=0.0;
 
@@ -225,13 +224,6 @@ vec4 mainImage(std::Texture2d myTex, vec2 rotate, std::Texture2d camTex)
     
 	}
 
-   //vec4 fragColor;
-	sum += camTexUV;
-	sum.a = myTexUV.a;
-    //fragColor = vec4(sum.xyz,diffuseAndOpacity.a);
-    //fragColor = vec4(myTex,1.);
-    //fragColor = vec4(myTex.u, myTex.v, 0., 1.);
-    //fragColor = myTex.tex;
-
+	sum += myTexUV;
   return sum;
 }
