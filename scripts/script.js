@@ -35,15 +35,15 @@ var Reactive = require('Reactive');
     const plane = await Scene.root.findFirst('plane0');
     const toRotateDuplicate = await Scene.root.findFirst('toRotateDuplicate');
 
-    async function axisRotation(axis_x, axis_y, axis_z, angle_degrees) {
+    async function axisRotation(axis_x, axis_y, axis_z, angle) {
 
         var norm = Reactive.sqrt(axis_x.mul(axis_x.add(axis_y)).mul(axis_y.add(axis_z)).mul(axis_z));
         axis_x = axis_x.div(norm);
         axis_y = axis_y.div(norm);
         axis_z = axis_z.div(norm);
         //var angle_radians = angle_degrees.mul(Math.PI).div(180.0);
-        var cos = Reactive.cos(angle_degrees.div(2.0));
-        var sin = Reactive.sin(angle_degrees.div(2.0));
+        var cos = Reactive.cos(angle.div(2.0));
+        var sin = Reactive.sin(angle.div(2.0));
         return Reactive.quaternion(cos, axis_x.mul(sin), axis_y.mul(sin), axis_z.mul(sin));
 
     }
@@ -68,5 +68,35 @@ var Reactive = require('Reactive');
     //method 4 - works
     plane.transform.rotation = toRotateDuplicate.worldTransform.lookAt(camera.worldTransform.position).rotation;
 
-    //Diagnostics.watch("y: ", theAngle.mul(Reactive.val(180.0).div(Math.PI)));
+    //method 5
+    //var angles = toRotateDuplicate.worldTransform.lookAt(camera.worldTransform.position).rotation.eulerAngles;
+    //var angleZ = Reactive.val(0);
+    //var angleX = angles.z.lt(0).ifThenElse(angles.x.lt(0).ifThenElse(angles.x.abs(), Reactive.val(Math.PI).sub(angles.x).add(Math.PI)), angles.x);
+    //var angleY = angles.y.lt(0).ifThenElse(angles.x.gt(0).ifThenElse(Reactive.val(Math.PI).sub(angles.y), Reactive.val(Math.PI).mul(2.0).sub(angles.y)), angles.x.lt(0).ifThenElse(Reactive.val(Math.PI).mul(0.5).sub(angles.y).add(Reactive.val(Math.PI).mul(0.5)), angles.y));
+    //var angleY = angles.y.lt(0).ifThenElse(angleX.lt(0).ifThenElse(Reactive.val(Math.PI).sub(angles.y), Reactive.val(Math.PI).mul(2.0).sub(angles.y)), angleX.ge(Math.PI).ifThenElse(Reactive.val(Math.PI).mul(0.5).sub(angles.y).add(Reactive.val(Math.PI).mul(0.5)), angles.y));
+    //0 -y 0 = 360 - (-y)
+//-180 -y 0 = 180 -(-y)
+//180 y 0 = 90 - y + 90
+    /*
+    if(angleZ < 0){
+        angleZ = 0;
+        if(angleX < 0)
+            angleX = abs(angles.x);
+        else
+            angleX = Math.PI - angles.x + Math.PI;
+    }
+    0 -y 0 = 360 + (-y)
+180 -y -180 = 180 + abs(y)
+-180 y -180 = 90 - y + 90
+    */
+
+    //plane.transform.rotation = Reactive.quaternionFromEuler(angleX, angles.y, angleZ);
+    //plane.transform.rotation = Reactive.quaternionFromEuler(angles.x, angles.y, angles.z);
+
+    //Diagnostics.watch("x0: ", angles.x.mul(Reactive.val(180.0).div(Math.PI)));
+    //Diagnostics.watch("y0: ", angles.y.mul(Reactive.val(180.0).div(Math.PI)));
+    //Diagnostics.watch("z0: ", angles.z.mul(Reactive.val(180.0).div(Math.PI)));
+    //Diagnostics.watch("x1: ", angleX.mul(Reactive.val(180.0).div(Math.PI)));
+    //Diagnostics.watch("y1: ", angleY.mul(Reactive.val(180.0).div(Math.PI)));
+    //Diagnostics.watch("z1: ", angleZ.mul(Reactive.val(180.0).div(Math.PI)));
 })(); // Enables async/await in JS [part 2]

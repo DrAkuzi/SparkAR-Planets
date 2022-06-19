@@ -1,40 +1,5 @@
-// "Supernova remnant" by Duke
-// https://www.shadertoy.com/view/MdKXzc
-//-------------------------------------------------------------------------------------
-// Based on "Dusty nebula 4" (https://www.shadertoy.com/view/MsVXWW) 
-// and "Protoplanetary disk" (https://www.shadertoy.com/view/MdtGRl) 
-// otaviogood's "Alien Beacon" (https://www.shadertoy.com/view/ld2SzK)
-// and Shane's "Cheap Cloud Flythrough" (https://www.shadertoy.com/view/Xsc3R4) shaders
-// Some ideas came from other shaders from this wonderful site
-// Press 1-2-3 to zoom in and zoom out.
-// License: Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License
-//-------------------------------------------------------------------------------------
-
-
-//-------------------
-#define pi 3.14159265
-#define R(p, a) p=cos(a)*p+sin(a)*vec2(p.y, -p.x)
-
-// iq's noise
-float noise(std::Texture2d myTex, vec3 x )
-{
-    vec3 p = floor(x);
-    vec3 f = fract(x);
-	f = f*f*(3.0-2.0*f);
-	vec2 uv = (p.xy+vec2(37.0,17.0)*p.z) + f.xy;
-	vec2 rg = myTex.sample((uv+ 0.5)/256.0).yx;
-	return 1. - 0.82*mix( rg.x, rg.y, f.z );
-}
-
-float fbm(std::Texture2d myTex, vec3 p)
-{
-   return noise(myTex, p*.06125)*.5 + noise(myTex, p*.125)*.25 + noise(myTex, p*.25)*.125 + noise(myTex, p*.4)*.2;
-}
-
-float length2( vec2 p )
-{
-	return sqrt( p.x*p.x + p.y*p.y );
-}
+#define PI 3.14159
+#define Rotate(p, a) p = vec2(p.y, -p.x) * sin(a) + p * cos(a)
 
 float length8( vec2 p )
 {
@@ -42,27 +7,20 @@ float length8( vec2 p )
 	return pow( p.x + p.y, 1.0/8.0 );
 }
 
-
 float Disk( vec3 p, vec3 t )
 {
-    vec2 q = vec2(length2(p.xy)-t.x,p.z*0.5);
-    return max(length8(q)-t.y, abs(p.z) - t.z);
+    vec2 q = vec2(sqrt(p.y * p.y + p.x * p.x) - t.x, p.z * 0.5);
+    return max(length8(q) - t.y, abs(p.z) - t.z);
 }
 
-//==============================================================
-// otaviogood's noise from https://www.shadertoy.com/view/ld2SzK
-//--------------------------------------------------------------
-// This spiral noise works by successively adding and rotating sin waves while increasing frequency.
-// It should work the same on all computers since it's not based on a hash function like some other noises.
-// It can be much faster than other noise functions if you're ok with some repetition.
-const float nudge = 0.9;	// size of perpendicular vector
+const float nudge = 0.9;// size of perpendicular vector
 
-float SpiralNoiseC(vec3 p)
+float SpiralNoiseC(vec3 p, int iterate)
 {
 	float normalizer = 1.0 / sqrt(1.0 + nudge*nudge);	
-    float n = 0.0;	// noise amount
-    float iter = 2.0;
-    for (int i = 0; i < 8; i++)
+    float n = 0.1;	// noise amount 
+    float iter = 3.0;
+    for (int i = 0; i < iterate; i++) //8 //this 1-5
     {
         // add sin and cos scaled inverse with the frequency
         n += -abs(sin(p.y*iter) + cos(p.x*iter)) / iter;	// abs for a ridged look
@@ -73,51 +31,35 @@ float SpiralNoiseC(vec3 p)
         p.xz += vec2(p.z, -p.x) * nudge;
         p.xz *= normalizer;
         // increase the frequency
-        iter *= 1.733733;
+        iter *= 1.733733; //1.733733
     }
     return n;
 }
 
-float NebulaNoise(std::Texture2d myTex, vec3 p)
+float NebulaNoise(std::Texture2d myTex, vec3 p, int iterate, vec3 disk)
 {
-    float final = Disk(p.xzy,vec3(2.0,1.8,1.25));
-    final += fbm(myTex, p*90.);
-    final += SpiralNoiseC(p.zxy*0.5123+100.0)*3.0;
+    float final = Disk(p.xzy, disk); //vec3(2.0,1.8,1.25) //this random min(0, 1.,0.)) max(6.5, 3.0,2.0))
+    //final += fbm(myTex, p*90.);
+    final += SpiralNoiseC(p.zxy*0.5123+100.0, iterate)*4.0; //SpiralNoiseC(p.zxy*0.5123+100.0)*3.0
 
     return final;
 }
 
-float map(std::Texture2d myTex, vec3 p, vec3 rotate) 
+float map(std::Texture2d myTex, vec3 p, vec3 rotate, float noise, int iterate, vec3 disk) 
 {
-	R(p.xz, rotate.x*0.008*pi);//+std::getTime()*0.25
-    R(p.yz, rotate.y*0.008*pi);
-	R(p.yx, rotate.z*0.008*pi);
+	Rotate(p.xz, rotate.x*0.008*PI +std::getTime()*0.25);//
+    Rotate(p.yz, rotate.y*0.008*PI);
+	//Rotate(p.yx, rotate.z*0.008*PI);
 
-	float NebNoise = abs(NebulaNoise(myTex, p/0.5)*0.5);
+	float NebNoise = abs(NebulaNoise(myTex, p/0.5 *0.5, iterate, disk)); //abs(NebulaNoise(myTex, p/0.5)*0.5); //try *0.02
     
-	return NebNoise+0.5*sin(1.)-0.4; //NebNoise+0.5*sin(std::getTime()*0.1)-0.4;
-}
-//--------------------------------------------------------------
-
-// assign color to the media
-vec3 computeColor( float density, float radius )
-{
-	// color based on density alone, gives impression of occlusion within
-	// the media
-	vec3 result = mix( vec3(0.,1.,0.), vec3(0.,1.,0.), density );
-	
-	// color added to the media
-	vec3 colCenter = 3.*vec3(1.,1.,1.);
-	vec3 colEdge = 1.5*vec3(1.,1.,1.);
-	result *= mix( colCenter, colEdge, min( (radius+.05)/.9, 1.15 ) );
-	
-	return result;
+	return NebNoise - noise; //NebNoise+0.5*sin(std::getTime()*0.1)-0.4; //-0.05 - 0.05 //this control
 }
 
 bool RaySphereIntersect(vec3 org, vec3 dir, out float near, out float far)
 {
 	float b = dot(dir, org);
-	float c = dot(org, org) - 8.;
+	float c = dot(org, org) - 5.; //- 5.
 	float delta = b*b - c;
 	if( delta < 0.0) 
 		return false;
@@ -127,7 +69,7 @@ bool RaySphereIntersect(vec3 org, vec3 dir, out float near, out float far)
 	return far > 0.0;
 }
 
-vec4 mainImage(std::Texture2d myTex, vec3 rotate)
+vec4 mainImage(std::Texture2d myTex, vec3 rotate, vec3 innerCol, vec3 outerCol, float noise, int iterate, vec3 disk)
 {  
 	// ro: ray origin
 	// rd: direction of the ray
@@ -154,75 +96,71 @@ vec4 mainImage(std::Texture2d myTex, vec3 rotate)
 
     if(RaySphereIntersect(ro, rd, min_dist, max_dist))
     {
-       
-	t = min_dist*step(t,min_dist);
-   
-	// raymarch loop
-	for (int i=0; i<64; i++) 
-	{
-	 
-		vec3 pos = ro + t*rd;
-  
-		// Loop break conditions.
-	    if(td>0.9 || d<0.1*t || t>10. || sum.a > 0.99 || t>max_dist) break;
-        
-        // evaluate distance function
-        float d = map(myTex, pos, rotate);
-		       
-		// change this string to control density 
-		d = max(d,0.0);
-        
-        // point light calculations
-        vec3 ldst = vec3(0.0)-pos;
-        float lDist = max(length(ldst), 0.001);
-
-        // the color of light 
-        vec3 lightColor=vec3(1.0,0.5,0.25);
-        if(i==0)
-        sum.rgb = (vec3(0.67,0.75,1.00)/(lDist*lDist*10.)/80.);
-        else
-        sum.rgb+=(vec3(0.67,0.75,1.00)/(lDist*lDist*10.)/80.); // star itself
-        sum.rgb+=(lightColor/exp(lDist*lDist*lDist*.08)/30.); // bloom
-        
-		if (d<h) 
+		t = min_dist*step(t,min_dist);
+	
+		// raymarch loop
+		for (int i=0; i<64; i++) 
 		{
-			// compute local density 
-			ld = h - d;
-            
-            // compute weighting factor 
-			w = (1. - td) * ld;
-     
-			// accumulate density
-			td += w + 1./200.;
 		
-			vec4 col = vec4( computeColor(td,lDist), td );
-            
-            // emission
-            sum += sum.a * vec4(sum.rgb, 0.0) * 0.2;	
-            
-			// uniform scale density
-			col.a *= 0.2;
-			// colour by alpha
-			col.rgb *= col.a;
-			// alpha blend in contribution
-			sum = sum + col*(1.0 - sum.a);  
-       
+			vec3 pos = ro + t*rd;
+	
+			// Loop break conditions.
+			if(td>0.9 || d<0.1*t || t>10. || sum.a > 0.99 || t>max_dist) break;
+			
+			// evaluate distance function
+			float d = map(myTex, pos, rotate, noise, iterate, disk);
+				
+			// change this string to control density 
+			d = max(d,0.0);
+			
+			// point light calculations
+			vec3 ldst = vec3(0.0)-pos;
+			float lDist = max(length(ldst), 0.001);
+
+			if(i==0)
+			sum.rgb = (vec3(1.0, 1.0, 1.0)/(lDist*lDist*10.)/80.);
+			else
+			sum.rgb+=(vec3(1.0, 1.0, 1.0)/(lDist*lDist*10.)/30.); // star itself //
+			sum.rgb+=(innerCol/exp(lDist*lDist*lDist*.08)/30.); // bloom
+			
+			if (d<h)
+			{
+				// compute local density 
+				ld = h - d;
+				
+				// compute weighting factor 
+				w = (1. - td) * ld;
+		
+				// accumulate density
+				td += w + 1./200.;
+			
+				vec4 col = vec4( outerCol, td );//vec4( computeColor(td,lDist), td );
+				
+				// emission
+				sum += sum.a * vec4(sum.rgb, 0.0) * 0.15;	
+				
+				// uniform scale density
+				col.a *= 0.2;
+				// colour by alpha
+				col.rgb *= col.a;
+				// alpha blend in contribution
+				sum = sum + col*(1.0 - sum.a);  
+		
+			}
+		
+			td += 1./70.;
+			
+			// trying to optimize step size near the camera and near the light source
+			t += max(d * 0.1 * max(min(length(ldst),length(ro)),1.0), 0.01);
+			
 		}
-      
-		td += 1./70.;
 		
-        // trying to optimize step size near the camera and near the light source
-        t += max(d * 0.1 * max(min(length(ldst),length(ro)),1.0), 0.01);
-        
-	}
-    
-    // simple scattering
-	sum *= 1. / exp( ld * 0.2 ) * 0.6;
-        
-   	sum = clamp( sum, 0.0, 1.0 );
-   
-    sum.xyz = sum.xyz*sum.xyz*(3.0-2.0*sum.xyz);
-    
+		// simple scattering
+		sum *= 1. / exp( ld * 0.2 ) * 0.6;
+			
+		sum = clamp( sum, 0.0, 1.0 );
+	
+		sum.xyz = sum.xyz*sum.xyz*(3.0-2.0*sum.xyz);
 	}
 
 	sum += myTexUV;
